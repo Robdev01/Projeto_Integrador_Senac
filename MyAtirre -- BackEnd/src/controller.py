@@ -1,8 +1,9 @@
 from werkzeug.security import generate_password_hash, check_password_hash
-from src.models import inserir_usuario, buscar_usuario_por_email
+from src.models import inserir_usuario, buscar_usuario_por_email, listar_tarefas_db, inserir_tarefa_db, \
+    atualizar_tarefa_db
 from flask import jsonify, request
 import jwt
-import datetime
+from datetime import datetime, timedelta
 from src.config import senha_forte
 
 
@@ -48,7 +49,7 @@ def login_usuario(data):
     # Criar o token JWT
     token_payload = {
         "email": usuario["email"],
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=1)  # token válido por 1 hora
+        "exp": datetime.utcnow() + timedelta(hours=1)  # token válido por 1 hora
     }
     token = jwt.encode(token_payload, SECRET_KEY, algorithm="HS256")
 
@@ -61,3 +62,25 @@ def login_usuario(data):
             "ativo": usuario.get("ativo")
         }
     }), 200
+
+def listar_tarefas(filtros):
+    tarefas = listar_tarefas_db(filtros)
+    for tarefa in tarefas:
+        tarefa['assigned_user'] = {'name': f'Funcionário {tarefa["id_funcionario"]}'}
+        tarefa['setor'] = {'name': f'Setor {tarefa["id_setor"]}'}
+        tarefa['title'] = tarefa['titulo']
+        tarefa['description'] = tarefa['descricao']
+        tarefa['assigned_to'] = str(tarefa['id_funcionario'])
+        tarefa['setor_id'] = str(tarefa['id_setor'])
+        tarefa['created_at'] = tarefa['data_criacao'].strftime('%Y-%m-%d')
+        tarefa['deadline'] = tarefa['prazo'].strftime('%Y-%m-%d') if tarefa['prazo'] else ''
+    return tarefas
+
+def criar_tarefa(data):
+    data['data_criacao'] = datetime.now()
+    inserir_tarefa_db(data)
+    return {"mensagem": "Tarefa criada com sucesso"}
+
+def editar_tarefa(tarefa_id, data):
+    atualizar_tarefa_db(tarefa_id, data)
+    return {"mensagem": "Tarefa atualizada com sucesso"}

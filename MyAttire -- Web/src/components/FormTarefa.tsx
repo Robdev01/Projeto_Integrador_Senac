@@ -50,31 +50,65 @@ const FormTarefa = ({ task, onClose, onSave }: FormTarefaProps) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
 
-    const taskData = {
-      ...formData,
-      deadline: new Date(formData.deadline).toISOString(),
-      status: task?.status || 'pendente' as const,
-      id: task?.id || Date.now().toString(),
-      created_by: '1', // Current user (admin)
-      created_at: task?.created_at || new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+    // Map formData to the API's expected payload structure
+    const payload = {
+      titulo: formData.title,
+      descricao: formData.description,
+      id_funcionario: parseInt(formData.assigned_to),
+      id_setor: parseInt(formData.setor_id),
+      prazo: formData.deadline,
+      prioridade: formData.priority,
+      status: task?.status || 'pendente',
     };
 
-    if (onSave) {
-      onSave(taskData);
-    } else {
-      // Mock save action
-      console.log('Saving task:', taskData);
+    try {
+      const response = await fetch('http://127.0.0.1:5003/api/tarefas', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Add authorization header if needed
+          // 'Authorization': `Bearer ${yourToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro ao criar tarefa: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('Tarefa criada com sucesso:', result);
+
+      // Map the payload back to the Task type for onSave callback
+      if (onSave) {
+        const taskData: Partial<Task> = {
+          id: result.id || Date.now().toString(), // Use API response ID if available
+          title: payload.titulo,
+          description: payload.descricao,
+          assigned_to: payload.id_funcionario.toString(),
+          setor_id: payload.id_setor.toString(),
+          deadline: payload.prazo,
+          priority: payload.prioridade,
+          status: payload.status,
+          created_by: '1', // Current user (admin)
+          created_at: task?.created_at || new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        onSave(taskData);
+      }
+
+      onClose();
+    } catch (error) {
+      console.error('Erro ao enviar a tarefa:', error);
+      setErrors({ submit: 'Erro ao salvar a tarefa. Tente novamente.' });
     }
-    
-    onClose();
   };
 
   const funcionarios = mockUsers.filter(user => user.role === 'funcionario' && user.active);
@@ -88,6 +122,8 @@ const FormTarefa = ({ task, onClose, onSave }: FormTarefaProps) => {
       </DialogHeader>
 
       <form onSubmit={handleSubmit} className="space-y-6 mt-6">
+        {errors.submit && <p className="text-sm text-destructive">{errors.submit}</p>}
+
         <div className="space-y-2">
           <Label htmlFor="title">Título *</Label>
           <Input

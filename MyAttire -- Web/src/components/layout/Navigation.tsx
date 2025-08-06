@@ -1,30 +1,42 @@
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { LogOut, User, Settings, Home, Users, Building2 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { LogOut, User, Home, Users, Building2 } from 'lucide-react';
 import logo from '@/assets/logo.png';
 
 const Navigation = () => {
-  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Obtém os dados do usuário do localStorage
+  const user = JSON.parse(localStorage.getItem('user')) || null;
+
   const handleLogout = () => {
-    logout();
-    navigate('/login');
+    // Remove token e dados do usuário do localStorage
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    navigate('/login', { replace: true });
   };
 
+  // Define os itens do menu com base no papel do usuário
   const menuItems = [
-    { 
-      label: 'Dashboard', 
-      path: user?.role === 'admin' ? '/admin/dashboard' : '/funcionario/dashboard',
-      icon: Home 
+    {
+      label: 'Dashboard',
+      path: user && user.role === 'admin' ? '/admin/dashboard' : '/funcionario/dashboard',
+      icon: Home,
     },
-    ...(user?.role === 'admin' ? [
-      { label: 'Usuários', path: '/admin/usuarios', icon: Users },
-      { label: 'Setores', path: '/admin/setores', icon: Building2 }
-    ] : [])
+    ...(user && user.role === 'admin'
+      ? [
+          { label: 'Usuários', path: '/admin/usuarios', icon: Users },
+          { label: 'Setores', path: '/admin/setores', icon: Building2 },
+        ]
+      : []),
   ];
+
+  // Se não houver usuário, redireciona para a página de login
+  if (!user) {
+    navigate('/login', { replace: true });
+    return null;
+  }
 
   return (
     <nav className="bg-card border-b border-border shadow-sm">
@@ -34,7 +46,7 @@ const Navigation = () => {
             <div className="flex-shrink-0 flex items-center">
               <img src={logo} alt="My Attire" className="h-10 w-auto" />
             </div>
-            
+
             <div className="hidden md:flex space-x-4">
               {menuItems.map((item) => {
                 const Icon = item.icon;
@@ -42,7 +54,7 @@ const Navigation = () => {
                 return (
                   <Button
                     key={item.path}
-                    variant={isActive ? "default" : "ghost"}
+                    variant={isActive ? 'default' : 'ghost'}
                     onClick={() => navigate(item.path)}
                     className="flex items-center gap-2"
                   >
@@ -57,10 +69,10 @@ const Navigation = () => {
           <div className="flex items-center space-x-4">
             <div className="flex items-center gap-2 text-sm">
               <User className="h-4 w-4" />
-              <span className="font-medium">{user?.name}</span>
-              <span className="text-muted-foreground">({user?.role})</span>
+              <span className="font-medium">{user.nome}</span>
+              <span className="text-muted-foreground">({user.role})</span>
             </div>
-            
+
             <Button
               variant="outline"
               size="sm"

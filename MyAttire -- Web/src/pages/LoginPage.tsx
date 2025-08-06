@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,50 +12,79 @@ const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { login, loading, user } = useAuth();
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
     if (!email || !password) {
       setError('Por favor, preencha todos os campos');
+      setLoading(false);
       return;
     }
 
-    const result = await login(email, password);
-    
-    if (result.success && result.user) {
-      if (result.user.role === 'admin') {
-        navigate('/admin/dashboard');
+    try {
+      const response = await fetch('http://127.0.0.1:5003/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, senha: password }), // Backend espera "senha"
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.token && data.usuario) {
+        const { token, usuario } = data;
+        // Armazena o token e os dados do usuário no localStorage
+        localStorage.setItem('token', token);
+        localStorage.setItem(
+          'user',
+          JSON.stringify({
+            email: usuario.email,
+            nome: usuario.nome,
+            role: usuario.perfil, // Mapeia "perfil" para "role"
+            ativo: usuario.ativo,
+          })
+        );
+
+        // Redireciona com base no perfil do usuário
+        if (usuario.perfil === 'admin') {
+          navigate('/admin/dashboard', { replace: true });
+        } else {
+          navigate('/funcionario/dashboard', { replace: true });
+        }
       } else {
-        navigate('/funcionario/dashboard');
+        setError(data.error || 'Resposta inválida do servidor');
       }
-    } else {
-      setError('Email ou senha inválidos');
+    } catch (error) {
+      setError('Erro ao conectar com o servidor. Verifique sua conexão ou tente novamente.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4">
-      <Card className="w-full max-w-md shadow-xl border-0 bg-card/80 backdrop-blur-sm">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/15 via-warning/10 via-accent/10 to-success/15 p-4 relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5 animate-pulse"></div>
+      <Card className="w-full max-w-md shadow-2xl border-0 bg-card/90 backdrop-blur-md card-vibrant animate-float relative z-10">
         <CardHeader className="text-center pb-6">
           <div className="flex justify-center mb-4">
             <img src={logo} alt="My Attire" className="h-20 w-auto" />
           </div>
-          <CardTitle className="text-2xl font-bold">Sistema de Gestão</CardTitle>
+          <CardTitle className="text-2xl font-bold gradient-text">Sistema de Gestão</CardTitle>
           <CardDescription>Entre com suas credenciais para acessar o sistema</CardDescription>
         </CardHeader>
-        
+
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
             {error && (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <div className="relative">
@@ -72,7 +100,7 @@ const LoginPage = () => {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
               <div className="relative">
@@ -88,12 +116,8 @@ const LoginPage = () => {
                 />
               </div>
             </div>
-            
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={loading}
-            >
+
+            <Button type="submit" className="w-full btn-animated pulse-glow" disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -104,12 +128,16 @@ const LoginPage = () => {
               )}
             </Button>
           </form>
-          
+
           <div className="mt-6 p-4 bg-muted/50 rounded-lg">
             <p className="text-sm text-muted-foreground mb-2">Credenciais de teste:</p>
             <div className="text-xs space-y-1">
-              <p><strong>Admin:</strong> admin@empresa.com / 123456</p>
-              <p><strong>Funcionário:</strong> joao@empresa.com / 123456</p>
+              <p>
+                <strong>Admin:</strong> admin@empresa.com / 123456
+              </p>
+              <p>
+                <strong>Funcionário:</strong> joao@empresa.com / 123456
+              </p>
             </div>
           </div>
         </CardContent>

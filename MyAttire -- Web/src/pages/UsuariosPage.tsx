@@ -36,19 +36,21 @@ const UsuariosPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-primary/15 via-warning/10 via-accent/10 to-success/15 flex flex-col relative">
+      <div className="absolute inset-0 bg-gradient-to-r from-primary/3 via-transparent to-accent/3 pointer-events-none"></div>
       <Navigation />
       
-      <div className="max-w-7xl mx-auto p-6">
+      <main className="flex-1 relative z-10">
+        <div className="max-w-7xl mx-auto p-6">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold mb-2">Gerenciamento de Usuários</h1>
+            <h1 className="text-3xl font-bold mb-2 gradient-text">Gerenciamento de Usuários</h1>
             <p className="text-muted-foreground">Gerencie usuários e funcionários do sistema</p>
           </div>
           
           <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
             <DialogTrigger asChild>
-              <Button className="flex items-center gap-2">
+              <Button className="flex items-center gap-2 btn-animated pulse-glow">
                 <Plus className="h-4 w-4" />
                 Novo Usuário
               </Button>
@@ -61,7 +63,7 @@ const UsuariosPage = () => {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card>
+          <Card className="card-vibrant border-l-4 border-l-primary">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Total de Usuários</CardTitle>
             </CardHeader>
@@ -70,7 +72,7 @@ const UsuariosPage = () => {
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="card-vibrant border-l-4 border-l-accent">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Usuários Ativos</CardTitle>
             </CardHeader>
@@ -79,7 +81,7 @@ const UsuariosPage = () => {
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="card-vibrant border-l-4 border-l-warning">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Funcionários</CardTitle>
             </CardHeader>
@@ -90,7 +92,7 @@ const UsuariosPage = () => {
         </div>
 
         {/* Search */}
-        <Card className="mb-6">
+        <Card className="mb-6 card-vibrant">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Search className="h-5 w-5" />
@@ -108,7 +110,7 @@ const UsuariosPage = () => {
         </Card>
 
         {/* Users Table */}
-        <Card>
+        <Card className="card-vibrant">
           <CardHeader>
             <CardTitle>Lista de Usuários</CardTitle>
             <CardDescription>
@@ -163,6 +165,7 @@ const UsuariosPage = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => handleEditUser(user)}
+                          className="btn-animated"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -171,6 +174,7 @@ const UsuariosPage = () => {
                           variant={user.active ? "destructive" : "success"}
                           size="sm"
                           onClick={() => handleToggleActive(user.id)}
+                          className="btn-animated"
                         >
                           {user.active ? (
                             <UserX className="h-4 w-4" />
@@ -198,7 +202,16 @@ const UsuariosPage = () => {
             )}
           </DialogContent>
         </Dialog>
-      </div>
+        </div>
+      </main>
+      
+      <footer className="bg-card/80 backdrop-blur-sm border-t border-border mt-auto">
+        <div className="container mx-auto px-4 py-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            Desenvolvido por <span className="font-semibold text-foreground">My Attire Technology</span>
+          </p>
+        </div>
+      </footer>
     </div>
   );
 };

@@ -39,19 +39,21 @@ const SetoresPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-primary/15 via-warning/10 via-accent/10 to-success/15 flex flex-col relative">
+      <div className="absolute inset-0 bg-gradient-to-r from-primary/3 via-transparent to-accent/3 pointer-events-none"></div>
       <Navigation />
       
-      <div className="max-w-7xl mx-auto p-6">
+      <main className="flex-1 relative z-10">
+        <div className="max-w-7xl mx-auto p-6">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold mb-2">Gerenciamento de Setores</h1>
+            <h1 className="text-3xl font-bold mb-2 gradient-text">Gerenciamento de Setores</h1>
             <p className="text-muted-foreground">Gerencie os setores da empresa</p>
           </div>
           
           <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
             <DialogTrigger asChild>
-              <Button className="flex items-center gap-2">
+              <Button className="flex items-center gap-2 btn-animated pulse-glow">
                 <Plus className="h-4 w-4" />
                 Novo Setor
               </Button>
@@ -64,7 +66,7 @@ const SetoresPage = () => {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card>
+          <Card className="card-vibrant border-l-4 border-l-primary">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Total de Setores</CardTitle>
             </CardHeader>
@@ -73,7 +75,7 @@ const SetoresPage = () => {
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="card-vibrant border-l-4 border-l-accent">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Setores Ativos</CardTitle>
             </CardHeader>
@@ -82,7 +84,7 @@ const SetoresPage = () => {
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="card-vibrant border-l-4 border-l-warning">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Setores Inativos</CardTitle>
             </CardHeader>
@@ -93,7 +95,7 @@ const SetoresPage = () => {
         </div>
 
         {/* Search */}
-        <Card className="mb-6">
+        <Card className="mb-6 card-vibrant">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Search className="h-5 w-5" />
@@ -111,7 +113,7 @@ const SetoresPage = () => {
         </Card>
 
         {/* Setores Table */}
-        <Card>
+        <Card className="card-vibrant">
           <CardHeader>
             <CardTitle>Lista de Setores</CardTitle>
             <CardDescription>
@@ -157,6 +159,7 @@ const SetoresPage = () => {
                           variant="outline"
                           size="sm"
                           onClick={() => handleEditSetor(setor)}
+                          className="btn-animated"
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -165,6 +168,7 @@ const SetoresPage = () => {
                           variant={setor.active ? "destructive" : "success"}
                           size="sm"
                           onClick={() => handleToggleActive(setor.id)}
+                          className="btn-animated"
                         >
                           {setor.active ? (
                             <ToggleRight className="h-4 w-4" />
@@ -192,7 +196,16 @@ const SetoresPage = () => {
             )}
           </DialogContent>
         </Dialog>
-      </div>
+        </div>
+      </main>
+      
+      <footer className="bg-card/80 backdrop-blur-sm border-t border-border mt-auto">
+        <div className="container mx-auto px-4 py-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            Desenvolvido por <span className="font-semibold text-foreground">My Attire Technology</span>
+          </p>
+        </div>
+      </footer>
     </div>
   );
 };
