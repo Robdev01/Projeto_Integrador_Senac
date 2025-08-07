@@ -1,11 +1,11 @@
 from flask import Flask
 from flask_cors import CORS
-from src.routes import routes
+from src.routes import rotas
 
 app = Flask(__name__)
 CORS(app)  # Permite requisições de qualquer origem (http, https, etc.)
 
-app.register_blueprint(routes, url_prefix='/api')
+app.register_blueprint(rotas, url_prefix='/api')
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5003)

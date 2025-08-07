@@ -1,99 +1,183 @@
 import pymysql
+from pymysql.cursors import DictCursor
+from typing import Dict, Any, List, Optional
 from src.config import db_config
 
-def inserir_usuario(nome, email, senha_hash, perfil, ativo=1):
-    conn = pymysql.connect(**db_config)
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO usuarios (nome, email, senha_hash, perfil, ativo)
-        VALUES (%s, %s, %s, %s, %s)
-    """, (nome, email, senha_hash, perfil, ativo))
-    conn.commit()
-    cursor.close()
-    conn.close()
 
-def buscar_usuario_por_email(email):
-    conn = pymysql.connect(**db_config)
-    cursor = conn.cursor(pymysql.cursors.DictCursor)
-    cursor.execute("SELECT * FROM usuarios WHERE email = %s", (email,))
-    usuario = cursor.fetchone()
-    cursor.close()
-    conn.close()
-    return usuario
+def obter_conexao_bd():
+    """Cria e retorna uma conexão com o banco de dados."""
+    return pymysql.connect(**db_config, cursorclass=DictCursor)
 
-def listar_tarefas_db(filtros):
-    conn = pymysql.connect(**db_config)
-    cursor = conn.cursor(pymysql.cursors.DictCursor)
 
-    sql = "SELECT * FROM tarefas WHERE 1=1"
+def inserir_usuario(nome: str, email: str, senha_hash: str, perfil: str, ativo: bool = True) -> None:
+    """
+    Insere um novo usuário no banco de dados.
+
+    Args:
+        nome: Nome do usuário.
+        email: Email do usuário.
+        hash_senha: Senha hasheada.
+        perfil: Perfil/papel do usuário.
+        ativo: Indica se o usuário está ativo (padrão: True).
+    """
+    with obter_conexao_bd() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO usuarios (nome, email, senha_hash, perfil, ativo)
+                VALUES (%s, %s, %s, %s, %s)
+                """,
+                (nome, email, senha_hash, perfil, ativo)
+            )
+        conn.commit()
+
+
+def buscar_usuario_por_email(email: str) -> Optional[Dict[str, Any]]:
+    """
+    Busca um usuário pelo email.
+
+    Args:
+        email: Email do usuário.
+
+    Returns:
+        Dicionário com os dados do usuário ou None se não encontrado.
+    """
+    with obter_conexao_bd() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM usuarios WHERE email = %s", (email,))
+            return cursor.fetchone()
+
+
+def listar_tarefas(filtros: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    Lista tarefas com base nos filtros fornecidos.
+
+    Args:
+        filtros: Dicionário com filtros opcionais (status, prioridade, funcionario, id_setor, busca).
+
+    Returns:
+        Lista de dicionários com tarefas.
+    """
+    consulta = "SELECT * FROM tarefas WHERE 1=1"
     params = []
 
-    if filtros.get("status") and filtros["status"] != "all":
-        sql += " AND status = %s"
+    if filtros.get("status") and filtros["status"] != "todos":
+        consulta += " AND status = %s"
         params.append(filtros["status"])
 
-    if filtros.get("prioridade") and filtros["prioridade"] != "all":
-        sql += " AND prioridade = %s"
+    if filtros.get("prioridade") and filtros["prioridade"] != "todos":
+        consulta += " AND prioridade = %s"
         params.append(filtros["prioridade"])
 
-    if filtros.get("id_funcionario") and filtros["id_funcionario"] != "all":
-        sql += " AND id_funcionario = %s"
-        params.append(filtros["id_funcionario"])
+    if filtros.get("funcionario") and filtros["funcionario"] != "todos":
+        consulta += " AND funcionario = %s"
+        params.append(filtros["funcionario"])
 
-    if filtros.get("id_setor") and filtros["id_setor"] != "all":
-        sql += " AND id_setor = %s"
+    if filtros.get("id_setor") and filtros["id_setor"] != "todos":
+        consulta += " AND id_setor = %s"
         params.append(filtros["id_setor"])
 
     if filtros.get("busca"):
-        sql += " AND (LOWER(titulo) LIKE %s OR LOWER(descricao) LIKE %s)"
-        busca = f"%{filtros['busca'].lower()}%"
-        params.extend([busca, busca])
+        consulta += " AND (LOWER(titulo) LIKE %s OR LOWER(descricao) LIKE %s)"
+        termo_busca = f"%{filtros['busca'].lower()}%"
+        params.extend([termo_busca, termo_busca])
 
-    cursor.execute(sql, params)
-    tarefas = cursor.fetchall()
+    with obter_conexao_bd() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(consulta, params)
+            return cursor.fetchall()
 
-    cursor.close()
-    conn.close()
-    return tarefas
 
-def inserir_tarefa_db(tarefa):
-    conn = pymysql.connect(**db_config)
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO tarefas (titulo, descricao, id_funcionario, id_setor, data_criacao, prazo, prioridade, status)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-    """, (
-        tarefa['titulo'],
-        tarefa['descricao'],
-        tarefa['id_funcionario'],
-        tarefa['id_setor'],
-        tarefa['data_criacao'],
-        tarefa['prazo'],
-        tarefa['prioridade'],
-        tarefa['status']
-    ))
-    conn.commit()
-    cursor.close()
-    conn.close()
+def inserir_tarefa(tarefa: Dict[str, Any]) -> None:
+    """
+    Insere uma nova tarefa no banco de dados.
 
-def atualizar_tarefa_db(id, tarefa):
-    conn = pymysql.connect(**db_config)
-    cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE tarefas
-        SET titulo = %s, descricao = %s, id_funcionario = %s, id_setor = %s,
-            prazo = %s, prioridade = %s, status = %s
-        WHERE id = %s
-    """, (
-        tarefa['titulo'],
-        tarefa['descricao'],
-        tarefa['id_funcionario'],
-        tarefa['id_setor'],
-        tarefa['prazo'],
-        tarefa['prioridade'],
-        tarefa['status'],
-        id
-    ))
-    conn.commit()
-    cursor.close()
-    conn.close()
+    Args:
+        tarefa: Dicionário com os dados da tarefa.
+    """
+    with obter_conexao_bd() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO tarefas (titulo, descricao, funcionario, setor, data_criacao, prazo, prioridade, status)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    tarefa["titulo"],
+                    tarefa["descricao"],
+                    tarefa["funcionario"],
+                    tarefa["setor"],
+                    tarefa["data_criacao"],
+                    tarefa["prazo"],
+                    tarefa["prioridade"],
+                    tarefa["status"]
+                )
+            )
+        conn.commit()
+
+
+def atualizar_tarefa(id_tarefa: int, tarefa: Dict[str, Any]) -> None:
+    """
+    Atualiza uma tarefa existente no banco de dados.
+
+    Args:
+        id_tarefa: ID da tarefa a ser atualizada.
+        tarefa: Dicionário com os dados atualizados da tarefa.
+    """
+    with obter_conexao_bd() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE tarefas
+                SET titulo = %s, descricao = %s, funcionario = %s, setor = %s,
+                    prazo = %s, prioridade = %s, status = %s
+                WHERE id = %s
+                """,
+                (
+                    tarefa["titulo"],
+                    tarefa["descricao"],
+                    tarefa["funcionario"],
+                    tarefa["setor"],
+                    tarefa["prazo"],
+                    tarefa["prioridade"],
+                    tarefa["status"],
+                    id_tarefa
+                )
+            )
+        conn.commit()
+
+
+def inserir_setor(setor: Dict[str, Any]) -> None:
+    """
+    Insere um novo setor no banco de dados.
+
+    Args:
+        setor: Dicionário com os dados do setor.
+    """
+    with obter_conexao_bd() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO setores (nome, ativo, data_criacao)
+                VALUES (%s, %s, %s)
+                """,
+                (
+                    setor["nome"],
+                    setor.get("ativo", True),
+                    setor["data_criacao"]
+                )
+            )
+        conn.commit()
+
+
+def listar_setores() -> List[Dict[str, Any]]:
+    """
+    Lista todos os setores ativos.
+
+    Returns:
+        Lista de dicionários com setores.
+    """
+    with obter_conexao_bd() as conn:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM setores WHERE ativo = 1")
+            return cursor.fetchall()

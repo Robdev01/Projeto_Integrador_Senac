@@ -1,36 +1,69 @@
 from flask import Blueprint, request, jsonify
-from src.controller import cadastrar_usuario, login_usuario, listar_tarefas, criar_tarefa, editar_tarefa
+from src.controller import (
+    cadastrar_usuario,
+    autenticar_usuario,
+    obter_tarefas,
+    criar_tarefa,
+    atualizar_tarefa_por_id,
+    criar_setor,
+    obter_setores
+)
 
-routes = Blueprint('routes', __name__)
+rotas = Blueprint('rotas', __name__)
 
-@routes.route('/cadastrar_usuario', methods=['POST'])
-def route_cadastrar_usuario():
-    return cadastrar_usuario(request.json)
 
-@routes.route('/login', methods=['POST'])
-def rota_login():
-    return login_usuario(request.json)
+@rotas.route('/usuarios/cadastrar', methods=['POST'])
+def rota_cadastrar_usuario():
+    """Cadastra um novo usuário."""
+    return cadastrar_usuario(request.get_json())
 
-@routes.route('/tarefas', methods=['GET'])
-def get_tarefas():
+
+@rotas.route('/usuarios/login', methods=['POST'])
+def rota_autenticar_usuario():
+    """Autentica um usuário e retorna um token JWT."""
+    return autenticar_usuario(request.get_json())
+
+
+@rotas.route('/tarefas', methods=['GET'])
+def rota_listar_tarefas():
+    """Lista tarefas com filtros opcionais."""
     filtros = {
         "status": request.args.get("status"),
         "prioridade": request.args.get("prioridade"),
-        "id_funcionario": request.args.get("id_funcionario"),
+        "funcionario": request.args.get("funcionario"),
         "id_setor": request.args.get("id_setor"),
         "busca": request.args.get("busca")
     }
-    tarefas = listar_tarefas(filtros)
+    tarefas = obter_tarefas(filtros)
     return jsonify(tarefas), 200
 
-@routes.route('/tarefas', methods=['POST'])
-def post_tarefa():
-    data = request.get_json()
-    resultado = criar_tarefa(data)
+
+@rotas.route('/tarefas', methods=['POST'])
+def rota_criar_tarefa():
+    """Cria uma nova tarefa."""
+    dados = request.get_json()
+    resultado = criar_tarefa(dados)
     return jsonify(resultado), 201
 
-@routes.route('/tarefas/<int:id>', methods=['PUT'])
-def put_tarefa(id):
-    data = request.get_json()
-    resultado = editar_tarefa(id, data)
+
+@rotas.route('/tarefas/<int:id_tarefa>', methods=['PUT'])
+def rota_atualizar_tarefa(id_tarefa):
+    """Atualiza uma tarefa existente."""
+    dados = request.get_json()
+    resultado = atualizar_tarefa_por_id(id_tarefa, dados)
     return jsonify(resultado), 200
+
+
+@rotas.route('/setores', methods=['POST'])
+def rota_criar_setor():
+    """Cria um novo setor."""
+    dados = request.get_json()
+    resultado = criar_setor(dados)
+    return jsonify(resultado), 201
+
+
+@rotas.route('/setores', methods=['GET'])
+def rota_listar_setores():
+    """Lista todos os setores ativos."""
+    setores = obter_setores()
+    return jsonify(setores), 200

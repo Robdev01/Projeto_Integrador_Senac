@@ -27,7 +27,7 @@ const LoginPage = () => {
     }
 
     try {
-      const response = await fetch('http://127.0.0.1:5003/api/login', {
+      const response = await fetch('http://127.0.0.1:5003/api/usuarios/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, senha: password }), // Backend espera "senha"
