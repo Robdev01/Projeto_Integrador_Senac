@@ -1,109 +1,184 @@
-import { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import Navigation from '@/components/layout/Navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Clock, Filter, CheckCircle2, AlertCircle, Circle } from 'lucide-react';
-import { mockTasks } from '@/data/mockData';
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import Navigation from "@/components/layout/Navigation";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar, Clock, Filter, CheckCircle2, AlertCircle, Circle } from "lucide-react";
+
+const API_BASE = "http://127.0.0.1:5050/"; // ex.: http://127.0.0.1:5003/api
+const API = (API_BASE || "").replace(/\/$/, ""); // remove barra final
+
+type TStatus = "pendente" | "em_andamento" | "concluida";
+
+type TTask = {
+  id: number;
+  titulo: string;
+  descricao: string;
+  funcionario?: string; // no backend estamos salvando NOME do funcionário
+  setor?: string;
+  prazo?: string;
+  data_criacao?: string;
+  prioridade?: number | string;
+  status: TStatus;
+};
 
 const DashboardFuncionario = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [priorityFilter, setPriorityFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [priorityFilter, setPriorityFilter] = useState("all");
+  const [tasks, setTasks] = useState<TTask[]>([]);
   const navigate = useNavigate();
 
-  // Get user from localStorage
-  const user = JSON.parse(localStorage.getItem('user')) || null;
+  // usuário logado (do localStorage). No login backend retorna { email, nome, role, setor, ativo }
+  const user = JSON.parse(localStorage.getItem("user") || "null");
 
-  // Redirect to login if user is not authenticated or not a funcionario
+  const authHeaders = () => {
+    const token = localStorage.getItem("token");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
+  // Redireciona se não autenticado ou não for funcionário (perfil 'comum')
   useEffect(() => {
-    if (!user || !user.role || user.role !== 'funcionario') {
-      navigate('/login', { replace: true });
+    if (!user || !user.role || user.role !== "comum") {
+      navigate("/login", { replace: true });
     }
   }, [navigate, user]);
 
-  // Filter tasks assigned to current user
-  const userTasks = mockTasks.filter((task) => task.assigned_to === user?.id);
+  // Carrega tarefas reais
+  const loadTasks = async () => {
+    const res = await fetch(`${API}/tarefas`, {
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const json: any[] = await res.json();
 
+    // mapeia pro shape do front (mantendo nomes)
+    const mapped: TTask[] = (Array.isArray(json) ? json : []).map((t: any) => ({
+      id: t.id,
+      titulo: t.titulo,
+      descricao: t.descricao,
+      funcionario: t.funcionario ?? "", // NOME do funcionário atribuído
+      setor: t.setor ?? "",
+      prazo: t.prazo,
+      data_criacao: t.data_criacao,
+      prioridade: Number(t.prioridade),
+      status: t.status as TStatus,
+    }));
+    setTasks(mapped);
+  };
+
+  useEffect(() => {
+    loadTasks().catch(console.error);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Apenas tarefas do usuário logado (comparando por NOME)
+  const userTasks = useMemo(
+    () => tasks.filter((t) => (t.funcionario || "").trim() === (user?.nome || "").trim()),
+    [tasks, user?.nome]
+  );
+
+  // Filtros
   const filteredTasks = useMemo(() => {
     return userTasks.filter((task) => {
       const matchesSearch =
-        task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        task.description.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
-      const matchesPriority = priorityFilter === 'all' || task.priority.toString() === priorityFilter;
-
+        (task.titulo || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (task.descricao || "").toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === "all" || task.status === (statusFilter as TStatus);
+      const matchesPriority = priorityFilter === "all" || String(task.prioridade) === priorityFilter;
       return matchesSearch && matchesStatus && matchesPriority;
     });
   }, [userTasks, searchTerm, statusFilter, priorityFilter]);
 
+  // Contadores
   const taskCounts = {
     total: userTasks.length,
-    pendente: userTasks.filter((t) => t.status === 'pendente').length,
-    em_andamento: userTasks.filter((t) => t.status === 'em_andamento').length,
-    concluida: userTasks.filter((t) => t.status === 'concluida').length,
+    pendente: userTasks.filter((t) => t.status === "pendente").length,
+    em_andamento: userTasks.filter((t) => t.status === "em_andamento").length,
+    concluida: userTasks.filter((t) => t.status === "concluida").length,
   };
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
+  // Helpers UI
+  const getPriorityColor = (priority?: number | string) => {
+    const p = Number(priority);
+    switch (p) {
       case 1:
-        return 'bg-destructive text-destructive-foreground';
+        return "bg-destructive text-destructive-foreground";
       case 2:
-        return 'bg-warning text-warning-foreground';
+        return "bg-warning text-warning-foreground";
       case 3:
-        return 'bg-primary text-primary-foreground';
+        return "bg-primary text-primary-foreground";
       case 4:
-        return 'bg-muted text-muted-foreground';
+        return "bg-muted text-muted-foreground";
       default:
-        return 'bg-muted text-muted-foreground';
+        return "bg-muted text-muted-foreground";
     }
   };
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = (status: TStatus) => {
     switch (status) {
-      case 'concluida':
+      case "concluida":
         return <CheckCircle2 className="h-4 w-4 text-accent" />;
-      case 'em_andamento':
+      case "em_andamento":
         return <AlertCircle className="h-4 w-4 text-warning" />;
-      case 'pendente':
+      case "pendente":
         return <Circle className="h-4 w-4 text-muted-foreground" />;
       default:
         return <Circle className="h-4 w-4" />;
     }
   };
 
-  const getPriorityLabel = (priority) => {
-    switch (priority) {
+  const getPriorityLabel = (priority?: number | string) => {
+    const p = Number(priority);
+    switch (p) {
       case 1:
-        return 'Crítica';
+        return "Crítica";
       case 2:
-        return 'Alta';
+        return "Alta";
       case 3:
-        return 'Média';
+        return "Média";
       case 4:
-        return 'Baixa';
+        return "Baixa";
       default:
-        return 'Indefinida';
+        return "Indefinida";
     }
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
+  const formatDate = (dateString?: string) => {
+    return dateString ? new Date(dateString).toLocaleDateString("pt-BR") : "";
   };
 
-  const isOverdue = (deadline, status) => {
-    return new Date(deadline) < new Date() && deadline !== '' && status !== 'concluida';
+  const isOverdue = (deadline?: string, status?: TStatus) => {
+    return !!deadline && new Date(deadline) < new Date() && status !== "concluida";
   };
 
-  const handleCompleteTask = (taskId) => {
-    // In a real app, this would make an API call
-    console.log('Completing task:', taskId);
+  // Concluir tarefa (PATCH /tarefas/:id { status: 'concluida' }) com update otimista
+  const handleCompleteTask = async (taskId: number) => {
+    const prev = tasks;
+    // otimismo: marca local só a do usuário
+    setTasks((cur) =>
+      cur.map((t) => (t.id === taskId ? { ...t, status: "concluida" as TStatus } : t))
+    );
+    try {
+      const res = await fetch(`${API}/tarefas/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ status: "concluida" }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      // se quiser, pode dar reload das tasks:
+      // await loadTasks();
+    } catch (e) {
+      console.error(e);
+      alert("Não foi possível concluir a tarefa.");
+      setTasks(prev); // rollback
+    }
   };
 
-  // Return null if redirecting to avoid rendering
+  // Evita render durante redirecionamento
   if (!user) return null;
 
   return (
@@ -217,18 +292,16 @@ const DashboardFuncionario = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         {getStatusIcon(task.status)}
-                        <CardTitle className="text-lg">{task.title}</CardTitle>
-                        <Badge className={getPriorityColor(task.priority)}>
-                          {getPriorityLabel(task.priority)}
-                        </Badge>
-                        {isOverdue(task.deadline, task.status) && (
+                        <CardTitle className="text-lg">{task.titulo}</CardTitle>
+                        <Badge className={getPriorityColor(task.prioridade)}>{getPriorityLabel(task.prioridade)}</Badge>
+                        {isOverdue(task.prazo, task.status) && (
                           <Badge variant="destructive">Atrasada</Badge>
                         )}
                       </div>
-                      <CardDescription>{task.description}</CardDescription>
+                      <CardDescription>{task.descricao}</CardDescription>
                     </div>
 
-                    {task.status !== 'concluida' && (
+                    {task.status !== "concluida" && (
                       <Button
                         variant="success"
                         size="sm"
@@ -245,15 +318,12 @@ const DashboardFuncionario = () => {
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
-                      <span>Prazo: {formatDate(task.deadline)}</span>
+                      <span>Prazo: {formatDate(task.prazo)}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Clock className="h-4 w-4" />
-                      <span>Criada em: {formatDate(task.created_at)}</span>
+                      <span>Criada em: {formatDate(task.data_criacao)}</span>
                     </div>
-                    {task.setor && (
-                      <Badge variant="outline">{task.setor.name}</Badge>
-                    )}
                   </div>
                 </CardContent>
               </Card>

@@ -1,18 +1,19 @@
+
 export interface User {
-  id: string;
-  name: string;
+  id: number;
+  nome: string;
   email: string;
-  role: 'admin' | 'funcionario';
-  setor_id?: string;
-  setor?: Setor;
-  active: boolean;
-  created_at: string;
+  perfil: 'admin' | 'comum';
+  setor: string;
+  ativo: number;
+  criado_em: string;
 }
 
 export interface Setor {
+  data_criacao(data_criacao: any): import("react").ReactNode;
+  nome: string;
   id: string;
   name: string;
-  description?: string;
   active: boolean;
   created_at: string;
 }
@@ -37,4 +38,14 @@ export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   loading: boolean;
+}
+
+export interface FormSetorProps {
+
+  setor?: Setor;
+
+  onClose: () => void;
+
+  onCreate?: (name: string) => Promise<void>;
+
 }

@@ -1,180 +1,217 @@
-from werkzeug.security import generate_password_hash, check_password_hash
-from flask import jsonify
-from datetime import datetime, timedelta
+from typing import Dict, Any
+import bcrypt
 import jwt
-from typing import Dict, Any, List, Optional
-from src.models import (
-    inserir_usuario,
-    buscar_usuario_por_email,
-    listar_tarefas,
-    inserir_tarefa,
-    atualizar_tarefa,
-    inserir_setor,
-    listar_setores
-)
-from src.config import senha_forte
+from datetime import datetime, timedelta
+from flask import jsonify, request
+from src.models import cadastrar_usuarios, atualizar_senha, listar_usuarios, listar_usuario_por_email, listar_setores, \
+    cadastrar_setor, cadastrar_tarefa, listar_tarefas, listar_tarefa_por_id, atualizar_tarefa, deletar_tarefa
+from src.config import db_config, senha_forte  # jwt_secret_key é a chave secreta para o JWT
+from datetime import datetime
 
+# Função para gerar o token JWT
+def gerar_token(usuario_id: int, email: str):
+    payload = {
+        "sub": usuario_id,
+        "email": email,
+        "exp": datetime.utcnow() + timedelta(hours=1)  # Token expira em 1 hora
+    }
+    token = jwt.encode(payload, senha_forte, algorithm='HS256')
+    return token
 
-def cadastrar_usuario(dados: Dict[str, Any]) -> tuple[Dict[str, Any], int]:
-    """
-    Cadastra um novo usuário no sistema.
+def cadastrar_usuario(data):
+    nome = data.get("nome")
+    email = data.get("email")
+    senha = data.get("senha")
+    perfil = data.get("perfil", "usuario")
+    setor = data.get("setor")
+    ativo = data.get("ativo", True)
 
-    Args:
-        dados: Dicionário com os dados do usuário (nome, email, senha, perfil, ativo).
+    if not nome or not email or not senha:
+        return jsonify({"error": "Nome, email e senha são obrigatórios"}), 400
 
-    Returns:
-        Tupla contendo a resposta JSON e o código de status HTTP.
-    """
-    nome = dados.get("nome")
-    email = dados.get("email")
-    senha = dados.get("senha")
-    perfil = dados.get("perfil")
-    ativo = dados.get("ativo", True)
+    # Verifica se o usuário já existe com o mesmo e-mail
+    if listar_usuario_por_email(email):
+        return jsonify({"error": "Usuário com esse e-mail já existe"}), 400
 
-    if not all([email, nome, senha]):
-        return jsonify({"erro": "Nome, email e senha são obrigatórios"}), 400
-
-    if buscar_usuario_por_email(email):
-        return jsonify({"erro": "Usuário com este email já existe"}), 400
+    # Hash da senha usando bcrypt
+    senha_hash = bcrypt.hashpw(senha.encode('utf-8'), bcrypt.gensalt())
 
     try:
-        senha_hash = generate_password_hash(senha)
-        inserir_usuario(nome, email, senha_hash, perfil, ativo)
-        return jsonify({"mensagem": "Usuário cadastrado com sucesso"}), 201
+        # Chama a função para cadastrar o usuário com a senha criptografada
+        data['senha_hash'] = senha_hash.decode('utf-8')  # bcrypt retorna em bytes, precisamos decodificar
+        cadastrar_usuarios(data)
+
+        # Gerar token JWT após o cadastro (opcional, pode ser usado no login)
+        token = gerar_token(data.get("id"), email)
+
+        return jsonify({
+            "message": "Usuário cadastrado com sucesso",
+            "token": token  # Retorna o token JWT
+        }), 201
     except Exception as e:
-        return jsonify({"erro": f"Falha ao cadastrar usuário: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500
 
 
-def autenticar_usuario(dados: Dict[str, Any]) -> tuple[Dict[str, Any], int]:
-    """
-    Autentica um usuário e gera um token JWT.
+def atualizar_senha_usuario(data):
+    id_usuario = data.get("id")
+    senha_atual = data.get("senha_atual")
+    nova_senha = data.get("nova_senha")
 
-    Args:
-        dados: Dicionário com email e senha.
+    if not id_usuario or not senha_atual or not nova_senha:
+        return jsonify({"error": "Dados incompletos"}), 400
 
-    Returns:
-        Tupla contendo a resposta JSON com token e informações do usuário, e o código de status HTTP.
-    """
-    email = dados.get("email")
-    senha = dados.get("senha")
-
-    if not all([email, senha]):
-        return jsonify({"erro": "Email e senha são obrigatórios"}), 400
-
-    usuario = buscar_usuario_por_email(email)
+    # Verifica se o usuário existe
+    usuario = listar_usuario_por_email(data.get("email"))
     if not usuario:
-        return jsonify({"erro": "Usuário não encontrado"}), 404
+        return jsonify({"error": "Usuário não encontrado"}), 404
 
-    if not check_password_hash(usuario["senha_hash"], senha):
-        return jsonify({"erro": "Senha inválida"}), 403
+    if not bcrypt.checkpw(senha_atual.encode('utf-8'), usuario["senha_hash"].encode('utf-8')):
+        return jsonify({"error": "Senha atual incorreta"}), 403
 
-    token_dados = {
-        "email": usuario["email"],
-        "exp": datetime.utcnow() + timedelta(hours=1)
-    }
-    token = jwt.encode(token_dados, senha_forte, algorithm="HS256")
+    # Hash da nova senha
+    nova_senha_hash = bcrypt.hashpw(nova_senha.encode('utf-8'), bcrypt.gensalt())
 
+    try:
+        # Chama a função para atualizar a senha no banco
+        data['senha_hash'] = nova_senha_hash.decode('utf-8')  # Atualiza com a nova senha hash
+        atualizar_senha(data)
+        return jsonify({"message": "Senha alterada com sucesso"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+def listar_todos_usuarios():
+    try:
+        usuarios = listar_usuarios()  # Chama o model para listar os usuários
+        return jsonify(usuarios), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+def listar_usuario_por_email_controller(email: str):
+    try:
+        usuario = listar_usuario_por_email(email)  # Chama o model para buscar por e-mail
+        if usuario:
+            return jsonify(usuario), 200
+        else:
+            return jsonify({"error": "Usuário não encontrado"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+def login_usuario(data):
+    email = data.get("email")
+    senha = data.get("senha")
+
+    if not email or not senha:
+        return jsonify({"error": "Email e senha são obrigatórios"}), 400
+
+    usuario = listar_usuario_por_email(email)
+    if not usuario:
+        return jsonify({"error": "Usuário não encontrado"}), 404
+
+    if not bcrypt.checkpw(senha.encode('utf-8'), usuario["senha_hash"].encode('utf-8')):
+        return jsonify({"error": "Senha incorreta"}), 403
+
+    # Gerar token JWT após login
+    token = gerar_token(usuario['id'], email)
     return jsonify({
-        "mensagem": "Login realizado com sucesso",
+        "message": "Login bem-sucedido",
         "token": token,
         "usuario": {
-            "nome": usuario["nome"],
-            "perfil": usuario["perfil"],
-            "ativo": usuario["ativo"]
+            "email": usuario['email'],
+            "nome": usuario['nome'],
+            "role": usuario['perfil'],
+            "setor": usuario['setor'],
+            "ativo": usuario['ativo']
         }
     }), 200
 
 
-def obter_tarefas(filtros: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """
-    Obtém tarefas com base nos filtros fornecidos.
+def cadastrar_setor_controller(data: Dict):
+    nome = data.get("nome")
 
-    Args:
-        filtros: Dicionário com filtros opcionais (status, prioridade, funcionario, id_setor, busca).
+    if not nome:
+        return jsonify({"error": "Nome do setor é obrigatório"}), 400
 
-    Returns:
-        Lista de dicionários com tarefas formatadas.
-    """
-    tarefas = listar_tarefas(filtros)
-    tarefas_formatadas = []
+    try:
+        # Chama a função para cadastrar o setor
+        data['nome'] = nome
+        cadastrar_setor(data)
 
-    for tarefa in tarefas:
-        tarefa_formatada = {
-            "id": tarefa["id"],
-            "titulo": tarefa.get("titulo", ""),
-            "descricao": tarefa.get("descricao", ""),
-            "nome_funcionario": tarefa.get("funcionario", ""),
-            "nome_setor": tarefa.get("setor", ""),
-            "data_criacao": tarefa["data_criacao"].strftime('%Y-%m-%d') if tarefa.get("data_criacao") else "",
-            "prazo": tarefa["prazo"].strftime('%Y-%m-%d') if tarefa.get("prazo") else "",
-            "status": tarefa.get("status", ""),
-            "prioridade": tarefa.get("prioridade", ""),
-            "funcionario": {"nome": tarefa.get("funcionario", "")},
-            "setor": {"nome": tarefa.get("setor", "")}
-        }
-        tarefas_formatadas.append(tarefa_formatada)
-
-    return tarefas_formatadas
+        # Retorno de sucesso
+        return jsonify({
+            "message": "Setor cadastrado com sucesso"
+        }), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
-def criar_tarefa(dados: Dict[str, Any]) -> Dict[str, str]:
-    """
-    Cria uma nova tarefa.
+# Função para listar os setores
+def listar_setores_controller():
+    try:
+        setores = listar_setores()
 
-    Args:
-        dados: Dicionário com os dados da tarefa.
+        if not setores:
+            return jsonify({"message": "Nenhum setor encontrado"}), 404
 
-    Returns:
-        Dicionário com mensagem de sucesso.
-    """
-    dados["data_criacao"] = datetime.now()
-    inserir_tarefa(dados)
-    return {"mensagem": "Tarefa criada com sucesso"}
+        return jsonify(setores), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
-def atualizar_tarefa_por_id(id_tarefa: int, dados: Dict[str, Any]) -> Dict[str, str]:
-    """
-    Atualiza uma tarefa existente.
+def validar_payload_tarefa(data: Dict[str, Any], create: bool = True):
+    obrigatorios = ["titulo", "setor"]
+    faltando = [c for c in obrigatorios if create and not data.get(c)]
+    if faltando:
+        return f"Campos obrigatórios ausentes: {', '.join(faltando)}"
+    return None
 
-    Args:
-        id_tarefa: ID da tarefa a ser atualizada.
-        dados: Dicionário com os dados atualizados da tarefa.
-
-    Returns:
-        Dicionário com mensagem de sucesso.
-    """
-    atualizar_tarefa(id_tarefa, dados)
-    return {"mensagem": "Tarefa atualizada com sucesso"}
-
-
-def criar_setor(dados: Dict[str, Any]) -> Dict[str, str]:
-    """
-    Cria um novo setor.
-
-    Args:
-        dados: Dicionário com os dados do setor.
-
-    Returns:
-        Dicionário com mensagem de sucesso.
-    """
-    dados["data_criacao"] = datetime.now()
-    inserir_setor(dados)
-    return {"mensagem": "Setor criado com sucesso"}
+def cadastrar_tarefa_controller(data: Dict[str, Any]):
+    erro = validar_payload_tarefa(data, create=True)
+    if erro:
+        return jsonify({"error": erro}), 400
+    try:
+        novo_id = cadastrar_tarefa(data)
+        tarefa = listar_tarefa_por_id(novo_id)
+        return jsonify({"message": "Tarefa cadastrada com sucesso", "tarefa": tarefa}), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
-def obter_setores() -> List[Dict[str, Any]]:
-    """
-    Obtém todos os setores ativos.
+def listar_tarefas_controller():
+    try:
+        return jsonify(listar_tarefas()), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-    Returns:
-        Lista de dicionários com setores formatados.
-    """
-    setores = listar_setores()
-    return [
-        {
-            "id": setor["id"],
-            "nome": setor.get("nome", ""),
-            "ativo": setor.get("ativo", False)
-        }
-        for setor in setores
-    ]
+
+def listar_tarefa_por_id_controller(tarefa_id: int):
+    try:
+        tarefa = listar_tarefa_por_id(tarefa_id)
+        if not tarefa:
+            return jsonify({"error": "Tarefa não encontrada"}), 404
+        return jsonify(tarefa), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+def atualizar_tarefa_controller(tarefa_id: int, data: Dict[str, Any]):
+    try:
+        if not listar_tarefa_por_id(tarefa_id):
+            return jsonify({"error": "Tarefa não encontrada"}), 404
+        atualizar_tarefa(tarefa_id, data)
+        tarefa = listar_tarefa_por_id(tarefa_id)
+        return jsonify({"message": "Tarefa atualizada com sucesso", "tarefa": tarefa}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+def deletar_tarefa_controller(tarefa_id: int):
+    try:
+        if not listar_tarefa_por_id(tarefa_id):
+            return jsonify({"error": "Tarefa não encontrada"}), 404
+        deletar_tarefa(tarefa_id)
+        return jsonify({"message": "Tarefa excluída com sucesso"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

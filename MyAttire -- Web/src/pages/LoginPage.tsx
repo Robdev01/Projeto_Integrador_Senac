@@ -27,37 +27,45 @@ const LoginPage = () => {
     }
 
     try {
-      const response = await fetch('http://127.0.0.1:5003/api/usuarios/login', {
+      const response = await fetch('http://127.0.0.1:5050/usuarios/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, senha: password }), // Backend espera "senha"
+        body: JSON.stringify({ email, senha: password }),
       });
 
       const data = await response.json();
 
       if (response.ok && data.token && data.usuario) {
         const { token, usuario } = data;
-        // Armazena o token e os dados do usuário no localStorage
+
+        // Armazenando o token e os dados do usuário no localStorage
         localStorage.setItem('token', token);
         localStorage.setItem(
           'user',
           JSON.stringify({
             email: usuario.email,
             nome: usuario.nome,
-            role: usuario.perfil, // Mapeia "perfil" para "role"
+            role: usuario.role, // Mapeia "perfil" para "role"
             ativo: usuario.ativo,
           })
         );
 
-        // Redireciona com base no perfil do usuário
-        if (usuario.perfil === 'admin') {
-          navigate('/admin/dashboard', { replace: true });
-        } else {
-          navigate('/funcionario/dashboard', { replace: true });
-        }
+        console.log('Usuário autenticado com sucesso!', usuario);  // Verifique os dados do usuário
+
+        // Definindo as rotas de redirecionamento com base no perfil do usuário
+        const rotaPorPermissao: Record<string, string> = {
+          admin: '/admin/dashboard',
+          comum: '/funcionario/dashboard',
+        };
+
+        // Usando a rota correta com base no perfil do usuário
+        const destino = rotaPorPermissao[usuario.role] || '/';
+        navigate(destino);
+
       } else {
         setError(data.error || 'Resposta inválida do servidor');
       }
+
     } catch (error) {
       setError('Erro ao conectar com o servidor. Verifique sua conexão ou tente novamente.');
     } finally {
@@ -128,18 +136,6 @@ const LoginPage = () => {
               )}
             </Button>
           </form>
-
-          <div className="mt-6 p-4 bg-muted/50 rounded-lg">
-            <p className="text-sm text-muted-foreground mb-2">Credenciais de teste:</p>
-            <div className="text-xs space-y-1">
-              <p>
-                <strong>Admin:</strong> admin@empresa.com / 123456
-              </p>
-              <p>
-                <strong>Funcionário:</strong> joao@empresa.com / 123456
-              </p>
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>

@@ -16,7 +16,6 @@ interface FormSetorProps {
 const FormSetor = ({ setor, onClose, onSave }: FormSetorProps) => {
   const [formData, setFormData] = useState({
     name: setor?.name || '',
-    description: setor?.description || '',
     active: setor?.active ?? true,
   });
 
@@ -77,16 +76,7 @@ const FormSetor = ({ setor, onClose, onSave }: FormSetorProps) => {
           {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="description">Descrição</Label>
-          <Textarea
-            id="description"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            placeholder="Descreva as responsabilidades do setor"
-            rows={3}
-          />
-        </div>
+       
 
         {setor && (
           <div className="space-y-2">
