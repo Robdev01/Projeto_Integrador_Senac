@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { LogOut, User, Home, Users, Building2 } from 'lucide-react';
-import logo from '@/assets/logo.png';
+import logo from '@/assets/9-removebg-preview.png';
 
 const Navigation = () => {
   const navigate = useNavigate();

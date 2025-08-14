@@ -3,6 +3,7 @@ from pymysql.cursors import DictCursor
 from typing import Dict, Any, List, Optional
 from src.config import db_config
 import traceback
+from datetime import datetime
 
 
 def cadastrar_usuarios(data: Dict[str, Any]) -> None:
@@ -197,6 +198,10 @@ def cadastrar_tarefa(data: Dict[str, Any]) -> int:
     try:
         conn = pymysql.connect(**db_config)
         cursor = conn.cursor()
+
+        # Se não vier no payload, define como agora
+        data_criacao = data.get('data_criacao') or datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
         query = """
             INSERT INTO tarefas (titulo, descricao, funcionario, setor, data_criacao, prazo, prioridade, status)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
@@ -206,7 +211,7 @@ def cadastrar_tarefa(data: Dict[str, Any]) -> int:
             data.get('descricao'),
             data.get('funcionario'),
             data.get('setor'),
-            data.get('data_criacao'),  # pode ser None; se na tabela tiver default NOW(), deixe None
+            data_criacao,
             data.get('prazo'),
             data.get('prioridade'),
             data.get('status'),

@@ -164,7 +164,7 @@ const DashboardFuncionario = () => {
     );
     try {
       const res = await fetch(`${API}/tarefas/${taskId}`, {
-        method: "PATCH",
+        method: "PUT",
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ status: "concluida" }),
       });
@@ -182,18 +182,19 @@ const DashboardFuncionario = () => {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-primary/15 via-warning/10 via-accent/10 to-success/15 flex flex-col relative">
+      <div className="absolute inset-0 bg-gradient-to-r from-primary/3 via-transparent to-accent/3 pointer-events-none"></div>
       <Navigation />
-
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Minhas Tarefas</h1>
+      <main className="flex-1 relative z-10">
+        <div className="max-w-7xl mx-auto p-6">
+          <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold mb-2 gradient-text">Minhas Tarefas</h1>
           <p className="text-muted-foreground">Gerencie suas tarefas atribuídas</p>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
+          <Card >
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Total</CardTitle>
             </CardHeader>
@@ -318,11 +319,11 @@ const DashboardFuncionario = () => {
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
-                      <span>Prazo: {formatDate(task.prazo)}</span>
+                      <span>Prazo: {formatDate(task.data_criacao)}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Clock className="h-4 w-4" />
-                      <span>Criada em: {formatDate(task.data_criacao)}</span>
+                      <span>Criada em: {formatDate(task.prazo)}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -331,6 +332,14 @@ const DashboardFuncionario = () => {
           )}
         </div>
       </div>
+      </main>
+      <footer className="bg-card/80 backdrop-blur-sm border-t border-border mt-auto">
+        <div className="container mx-auto px-4 py-6 text-center">
+          <p className="text-sm text-muted-foreground">
+            Desenvolvido por <span className="font-semibold text-foreground">IGET</span>
+          </p>
+        </div>
+      </footer>
     </div>
   );
 };

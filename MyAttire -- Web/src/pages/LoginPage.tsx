@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Mail, Lock } from 'lucide-react';
-import logo from '@/assets/logo.png';
+import logo from '@/assets/9-removebg-preview.png';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -76,7 +76,7 @@ const LoginPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/15 via-warning/10 via-accent/10 to-success/15 p-4 relative overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5 animate-pulse"></div>
-      <Card className="w-full max-w-md shadow-2xl border-0 bg-card/90 backdrop-blur-md card-vibrant animate-float relative z-10">
+      <Card className="w-full max-w-md shadow-2xl border-0 bg-card/90 backdrop-blur-md card-vibrant  relative z-10">
         <CardHeader className="text-center pb-6">
           <div className="flex justify-center mb-4">
             <img src={logo} alt="My Attire" className="h-20 w-auto" />

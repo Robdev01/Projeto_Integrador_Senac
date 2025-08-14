@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Setor } from '@/types';
@@ -20,6 +19,7 @@ const FormSetor = ({ setor, onClose, onSave }: FormSetorProps) => {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -32,35 +32,58 @@ const FormSetor = ({ setor, onClose, onSave }: FormSetorProps) => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleCreateSetor = async (nome: string) => {
+    try {
+      setLoading(true);
+      const response = await fetch("http://127.0.0.1:5050/setores", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nome }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro ao criar setor.");
+      }
+
+      const newSetor = await response.json();
+
+      if (onSave) {
+        onSave(newSetor); // Passa para o pai
+      }
+
+      onClose();
+    } catch (error) {
+      console.error("Erro ao criar setor:", error);
+      setErrors({ api: "Falha ao criar setor. Verifique o console para detalhes." });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
 
-    const setorData = {
-      ...formData,
-      id: setor?.id || Date.now().toString(),
-      created_at: setor?.created_at || new Date().toISOString(),
-    };
+    if (!validateForm()) return;
 
-    if (onSave) {
-      onSave(setorData);
+    if (!setor) {
+      // Criar novo setor
+      handleCreateSetor(formData.name);
     } else {
-      // Mock save action
-      console.log('Saving setor:', setorData);
+      // Atualizar setor
+      const setorData = {
+        ...formData,
+        id: setor.id,
+        created_at: setor.created_at,
+      };
+      if (onSave) onSave(setorData);
+      onClose();
     }
-    
-    onClose();
   };
 
   return (
     <>
       <DialogHeader>
-        <DialogTitle>
-          {setor ? 'Editar Setor' : 'Novo Setor'}
-        </DialogTitle>
+        <DialogTitle>{setor ? 'Editar Setor' : 'Novo Setor'}</DialogTitle>
       </DialogHeader>
 
       <form onSubmit={handleSubmit} className="space-y-6 mt-6">
@@ -74,14 +97,16 @@ const FormSetor = ({ setor, onClose, onSave }: FormSetorProps) => {
             className={errors.name ? 'border-destructive' : ''}
           />
           {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+          {errors.api && <p className="text-sm text-destructive">{errors.api}</p>}
         </div>
-
-       
 
         {setor && (
           <div className="space-y-2">
             <Label htmlFor="active">Status</Label>
-            <Select value={formData.active.toString()} onValueChange={(value) => setFormData({ ...formData, active: value === 'true' })}>
+            <Select
+              value={formData.active.toString()}
+              onValueChange={(value) => setFormData({ ...formData, active: value === 'true' })}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o status" />
               </SelectTrigger>
@@ -94,11 +119,11 @@ const FormSetor = ({ setor, onClose, onSave }: FormSetorProps) => {
         )}
 
         <div className="flex justify-end space-x-3 pt-6 border-t">
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
             Cancelar
           </Button>
-          <Button type="submit">
-            {setor ? 'Atualizar' : 'Criar'} Setor
+          <Button type="submit" disabled={loading}>
+            {loading ? 'Salvando...' : setor ? 'Atualizar' : 'Criar'}
           </Button>
         </div>
       </form>

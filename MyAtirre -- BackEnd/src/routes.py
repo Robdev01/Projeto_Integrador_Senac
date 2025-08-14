@@ -70,7 +70,7 @@ def rota_obter_tarefa(tarefa_id):
     return listar_tarefa_por_id_controller(tarefa_id)
 
 # Atualizar (parcial ou total)
-@rotas.route('/tarefas/<int:tarefa_id>', methods=['PUT', 'PATCH'])
+@rotas.route('/tarefas/<int:tarefa_id>', methods=['PUT'])
 def rota_atualizar_tarefa(tarefa_id):
     return atualizar_tarefa_controller(tarefa_id, request.get_json())
 

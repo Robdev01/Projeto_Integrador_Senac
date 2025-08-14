@@ -82,7 +82,7 @@ const RegisterPage = () => {
       }
 
       setSuccess("Usuário cadastrado com sucesso!");
-      setTimeout(() => navigate("/login"), 2000);
+      setTimeout(() => navigate(-1), 2000);
     } catch (error) {
       setError(error.message);
     }
@@ -94,11 +94,15 @@ const RegisterPage = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/15 via-warning/10 via-accent/10 to-success/15 p-4 relative overflow-hidden">
-      <Card className="w-full max-w-md shadow-2xl border-0 bg-card/90 backdrop-blur-md card-vibrant animate-float relative z-10">
+      <Card className="w-full max-w-md shadow-2xl border-0 bg-card/90 backdrop-blur-md card-vibrant relative z-10">
         <CardHeader className="text-center pb-6">
           <CardTitle className="text-2xl font-bold gradient-text">Cadastro de Novo Usuário</CardTitle>
         </CardHeader>
-
+        <div className="mt-4 text-center">
+          <Button variant="outline" className="btn-animated" onClick={handleBack}>
+            <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
+          </Button>
+        </div>
         <CardContent>
           {error && <p className="text-red-500 text-center mb-4">{error}</p>}
           {success && <p className="text-green-500 text-center mb-4">{success}</p>}
@@ -196,11 +200,7 @@ const RegisterPage = () => {
               Cadastrar
             </Button>
           </form>
-          <div className="mt-4 text-center">
-            <Button variant="outline" className="btn-animated" onClick={handleBack}>
-              <ArrowLeft className="h-4 w-4 mr-2" /> Voltar
-            </Button>
-          </div>
+
         </CardContent>
       </Card>
     </div>

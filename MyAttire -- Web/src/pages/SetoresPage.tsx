@@ -61,29 +61,7 @@ const SetoresPage = () => {
     return new Date(dateString).toLocaleDateString("pt-BR");
   };
 
-  // Handle new sector creation
-  const handleCreateSetor = async (nome: string) => {
-    try {
-      const response = await fetch("http://127.0.0.1:5050/setores", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ nome }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Erro ao criar setor.");
-      }
-
-      const newSetor = await response.json(); // Assuming API returns the created setor
-      setSetores([...setores, newSetor]); // Add new setor to the list
-      setIsCreateModalOpen(false); // Close modal
-    } catch (error) {
-      console.error("Erro ao criar setor:", error);
-      setError("Falha ao criar setor. Verifique o console para detalhes.");
-    }
-  };
+ 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/15 via-warning/10 via-accent/10 to-success/15 flex flex-col relative">
