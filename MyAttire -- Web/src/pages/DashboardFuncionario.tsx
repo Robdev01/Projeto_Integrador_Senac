@@ -319,11 +319,11 @@ const DashboardFuncionario = () => {
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
-                      <span>Prazo: {formatDate(task.data_criacao)}</span>
+                      <span>Prazo: {formatDate(task.prazo)}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Clock className="h-4 w-4" />
-                      <span>Criada em: {formatDate(task.prazo)}</span>
+                      <span>Criada em: {formatDate(task.data_criacao)}</span>
                     </div>
                   </div>
                 </CardContent>
